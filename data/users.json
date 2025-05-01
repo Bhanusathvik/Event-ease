@@ -16,5 +16,17 @@
         "email": "jsk@gmail.com",
         "password": "scrypt:32768:8:1$jW5OMCjlkutlFDwW$4d03677c1befd07c374a1621f5f91516e6bce20e2ce12b38f28f7aa09d39dea9de8c0c071ea84bcede29409de5336964a54f0a12b81062e08da3e593fead4ac9",
         "role": "Venue Owner"
+    },
+    {
+        "name": "jacket babu",
+        "email": "jacky@gmail.com",
+        "password": "scrypt:32768:8:1$oRWQT2aB439IrLkO$25d0066eae0cbcb6e6aaeeb3822d8331568d3764d3947b5d4daea088a2b56a2d68fcde8967932550d5b6d32c69082744246bdadc78198ae32bef2b734cb79b54",
+        "role": "Vendor"
+    },
+    {
+        "name": "aneeka",
+        "email": "anneka@gmail.com",
+        "password": "scrypt:32768:8:1$38TV0ZHo72ZEhoGF$f0ea932503cbc5fbd8d9a2279f71879321b5710810b86c92b2367394601aeebe0b5a9f3029d94b3817e5131df6fd531f2e8de352fa4c24b2bad2cb2daa5a79b4",
+        "role": "User"
     }
 ]

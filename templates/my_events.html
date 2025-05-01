@@ -1,35 +1,50 @@
-{% extends 'base.html' %}
-
-{% block title %}My Events - Event Ease{% endblock %}
-
-{% block content %}
-<div class="card">
-    <h2>My Events</h2>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Events</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        .event-card {
+            border: 1px solid #ccc;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .map {
+            height: 300px;
+            width: 100%;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>My Events</h1>
     
-    {% if events %}
-    <table>
-        <thead>
-            <tr>
-                <th>Event Title</th>
-                <th>Description</th>
-                <th>Vendor</th>
-                <th>Venue Owner</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for event in events %}
-            <tr>
-                <td>{{ event.title }}</td>
-                <td>{{ event.description }}</td>
-                <td>{{ event.vendor_email }}</td>
-                <td>{{ event.venue_owner_email }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p>You haven't created any events yet.</p>
-    <a href="{{ url_for('create_event') }}" class="btn">Create Your First Event</a>
-    {% endif %}
-</div>
-{% endblock %}
+    {% for event in events %}
+    <div class="event-card">
+        <h2>{{ event.title }}</h2>
+        <p><strong>Description:</strong> {{ event.description }}</p>
+        <p><strong>Vendor:</strong> {{ event.vendor_email }}</p>
+        <p><strong>Venue Owner:</strong> {{ event.venue_owner_email }}</p>
+        <p><strong>Reminder:</strong> {{ event.reminder_date }}</p>
+
+        {% if event.venue_location_lat and event.venue_location_lng %}
+        <div id="map{{ loop.index }}" class="map"></div>
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                var map = L.map('map{{ loop.index }}').setView(
+                    [{{ event.venue_location_lat }}, {{ event.venue_location_lng }}],
+                    14
+                );
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19
+                }).addTo(map);
+                L.marker([{{ event.venue_location_lat }}, {{ event.venue_location_lng }}]).addTo(map);
+            });
+        </script>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</body>
+</html>

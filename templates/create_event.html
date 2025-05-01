@@ -3,6 +3,10 @@
 {% block title %}Create Event - Event Ease{% endblock %}
 
 {% block content %}
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 <div class="card">
     <h2>Create New Event</h2>
     <form method="POST" action="{{ url_for('create_event') }}">
@@ -15,6 +19,12 @@
             <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
         </div>
         <div class="form-group">
+            <label for="map">Select Venue Location</label>
+            <div id="map" style="height: 400px; width: 100%;"></div>
+            <input type="hidden" id="venue_location_lat" name="venue_location_lat">
+            <input type="hidden" id="venue_location_lng" name="venue_location_lng">
+        </div>
+        <div class="form-group">
             <label for="vendor">Select Vendor</label>
             <select class="form-control" id="vendor" name="vendor" required>
                 <option value="">-- Select Vendor --</option>
@@ -22,6 +32,14 @@
                 <option value="{{ vendor.email }}">{{ vendor.name }}</option>
                 {% endfor %}
             </select>
+        </div>
+        <div class="form-group">
+            <label for="vendor_phone">Vendor Phone</label>
+            <input type="text" class="form-control" id="vendor_phone" name="vendor_phone" required>
+        </div>
+        <div class="form-group">
+            <label for="vendor_services">Vendor Services</label>
+            <input type="text" class="form-control" id="vendor_services" name="vendor_services" required>
         </div>
         <div class="form-group">
             <label for="venue_owner">Select Venue Owner</label>
@@ -33,8 +51,76 @@
             </select>
         </div>
         <div class="form-group">
+            <label for="reminder_date">Reminder Date and Time</label>
+            <input type="datetime-local" class="form-control" id="reminder_date" name="reminder_date" required>
+        </div>
+        <div class="form-group">
             <button type="submit" class="btn">Create Event</button>
         </div>
     </form>
 </div>
+
+<!-- Leaflet JS Map Logic -->
+<script>
+    let map, marker;
+
+    function updateCoordinates(lat, lng) {
+        document.getElementById('venue_location_lat').value = lat;
+        document.getElementById('venue_location_lng').value = lng;
+    }
+
+    window.onload = function () {
+        map = L.map('map').setView([20.5937, 78.9629], 5); // Default to India
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        marker = L.marker([20.5937, 78.9629], { draggable: true }).addTo(map);
+        updateCoordinates(20.5937, 78.9629);
+
+        map.on('click', function (e) {
+            marker.setLatLng(e.latlng);
+            updateCoordinates(e.latlng.lat, e.latlng.lng);
+        });
+
+        marker.on('dragend', function (e) {
+            const pos = e.target.getLatLng();
+            updateCoordinates(pos.lat, pos.lng);
+        });
+
+        // Create "Use My Location" button
+        const locateBtn = L.control({ position: 'topleft' });
+        locateBtn.onAdd = function () {
+            const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+            div.innerHTML = '<a href="#" title="Use My Location" style="font-size:16px;padding:4px;">📍</a>';
+            div.onclick = function (e) {
+                e.preventDefault();
+                getMyLocation();
+            };
+            return div;
+        };
+        locateBtn.addTo(map);
+    };
+
+    function getMyLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function (position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    map.setView([lat, lng], 15);
+                    marker.setLatLng([lat, lng]);
+                    updateCoordinates(lat, lng);
+                },
+                function () {
+                    alert("Unable to retrieve your location.");
+                }
+            );
+        } else {
+            alert("Geolocation is not supported by your browser.");
+        }
+    }
+</script>
 {% endblock %}

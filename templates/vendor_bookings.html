@@ -12,8 +12,9 @@
             <tr>
                 <th>Event Title</th>
                 <th>Description</th>
-                <th>Created By</th>
-                <th>Venue Owner</th>
+                <th>User Name</th>
+                <th>Vendor Services</th>
+                <th>Venue Location</th>
             </tr>
         </thead>
         <tbody>
@@ -22,7 +23,8 @@
                 <td>{{ event.title }}</td>
                 <td>{{ event.description }}</td>
                 <td>{{ event.user_name }}</td>
-                <td>{{ event.venue_owner_email }}</td>
+                <td>{{ event.vendor_services }}</td>
+                <td>{{ event.venue_location }}</td>
             </tr>
             {% endfor %}
         </tbody>

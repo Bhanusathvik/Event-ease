@@ -19,14 +19,13 @@ def initialize_data_files():
     if not os.path.exists(USERS_FILE):
         with open(USERS_FILE, 'w') as f:
             json.dump([], f)
-    
     if not os.path.exists(EVENTS_FILE):
         with open(EVENTS_FILE, 'w') as f:
             json.dump([], f)
 
 initialize_data_files()
 
-# Helper functions for data handling
+# Helper functions
 def load_users():
     with open(USERS_FILE, 'r') as f:
         return json.load(f)
@@ -44,17 +43,11 @@ def save_events(events):
         json.dump(events, f, indent=4)
 
 def get_user_by_email(email):
-    users = load_users()
-    for user in users:
-        if user['email'] == email:
-            return user
-    return None
+    return next((user for user in load_users() if user['email'] == email), None)
 
 def get_users_by_role(role):
-    users = load_users()
-    return [user for user in users if user['role'] == role]
+    return [user for user in load_users() if user['role'] == role]
 
-# Routes
 @app.route('/')
 def index():
     if 'user_email' in session:
@@ -68,15 +61,13 @@ def register():
         email = request.form['email']
         password = request.form['password']
         role = request.form['role']
-        
+
         users = load_users()
-        
-        # Check if user already exists
+
         if any(user['email'] == email for user in users):
             flash('Email already registered. Please use a different email.')
             return redirect(url_for('register'))
-        
-        # Add new user
+
         new_user = {
             'name': name,
             'email': email,
@@ -85,10 +76,10 @@ def register():
         }
         users.append(new_user)
         save_users(users)
-        
+
         flash('Registration successful! Please login.')
         return redirect(url_for('login'))
-    
+
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -96,9 +87,9 @@ def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        
+
         user = get_user_by_email(email)
-        
+
         if user and check_password_hash(user['password'], password):
             session['user_email'] = user['email']
             session['user_name'] = user['name']
@@ -107,7 +98,7 @@ def login():
             return redirect(url_for('home'))
         else:
             flash('Invalid email or password. Please try again.')
-    
+
     return render_template('login.html')
 
 @app.route('/logout')
@@ -121,27 +112,29 @@ def home():
     if 'user_email' not in session:
         flash('Please login first.')
         return redirect(url_for('login'))
-    
+
     return render_template('home.html', 
-                          user_name=session['user_name'], 
-                          user_role=session['user_role'])
+                           user_name=session['user_name'], 
+                           user_role=session['user_role'])
 
 @app.route('/create_event', methods=['GET', 'POST'])
 def create_event():
     if 'user_email' not in session:
         flash('Please login first.')
         return redirect(url_for('login'))
-    
-    '''if session['user_role'] != 'User':
-        flash('Only users can create events.')
-        return redirect(url_for('home'))'''
-    
+
     if request.method == 'POST':
-        title = request.form['title']
-        description = request.form['description']
-        vendor_email = request.form['vendor']
-        venue_owner_email = request.form['venue_owner']
-        
+        title = request.form.get('title')
+        description = request.form.get('description')
+        vendor_email = request.form.get('vendor')
+        venue_owner_email = request.form.get('venue_owner')
+        vendor_services = request.form.get('vendor_services')
+        vendor_phone = request.form.get('vendor_phone')
+        venue_location_lat = request.form.get('venue_location_lat')
+        venue_location_lng = request.form.get('venue_location_lng')
+        venue_phone = request.form.get('venue_phone')
+        reminder_date = request.form.get('reminder_date')
+
         events = load_events()
         new_event = {
             'title': title,
@@ -149,14 +142,20 @@ def create_event():
             'user_email': session['user_email'],
             'user_name': session['user_name'],
             'vendor_email': vendor_email,
-            'venue_owner_email': venue_owner_email
+            'venue_owner_email': venue_owner_email,
+            'vendor_services': vendor_services,
+            'vendor_phone': vendor_phone,
+            'venue_location_lat': venue_location_lat,
+            'venue_location_lng': venue_location_lng,
+            'venue_phone': venue_phone,
+            'reminder_date': reminder_date
         }
         events.append(new_event)
         save_events(events)
-        
+
         flash('Event created successfully!')
         return redirect(url_for('my_events'))
-    
+
     vendors = get_users_by_role('Vendor')
     venue_owners = get_users_by_role('Venue Owner')
     return render_template('create_event.html', vendors=vendors, venue_owners=venue_owners)
@@ -166,25 +165,21 @@ def my_events():
     if 'user_email' not in session:
         flash('Please login first.')
         return redirect(url_for('login'))
-    
+
     events = load_events()
-    #if session['user_role'] == 'User':
     user_events = [event for event in events if event['user_email'] == session['user_email']]
     return render_template('my_events.html', events=user_events)
-    '''else:
-        flash('Only users can view their events.')
-        return redirect(url_for('home'))'''
 
 @app.route('/vendor_bookings')
 def vendor_bookings():
     if 'user_email' not in session:
         flash('Please login first.')
         return redirect(url_for('login'))
-    
+
     if session['user_role'] != 'Vendor':
         flash('Only vendors can view vendor bookings.')
         return redirect(url_for('home'))
-    
+
     events = load_events()
     vendor_events = [event for event in events if event['vendor_email'] == session['user_email']]
     return render_template('vendor_bookings.html', events=vendor_events)
@@ -194,11 +189,11 @@ def venue_bookings():
     if 'user_email' not in session:
         flash('Please login first.')
         return redirect(url_for('login'))
-    
+
     if session['user_role'] != 'Venue Owner':
         flash('Only venue owners can view venue bookings.')
         return redirect(url_for('home'))
-    
+
     events = load_events()
     venue_events = [event for event in events if event['venue_owner_email'] == session['user_email']]
     return render_template('venue_bookings.html', events=venue_events)

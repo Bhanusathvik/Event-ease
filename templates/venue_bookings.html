@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 
-{% block title %}Venue Bookings - Event Ease{% endblock %}
+{% block title %}Vendor Bookings - Event Ease{% endblock %}
 
 {% block content %}
 <div class="card">
-    <h2>My Venue Bookings</h2>
+    <h2>My Vendor Bookings</h2>
     
     {% if events %}
     <table>
@@ -12,8 +12,9 @@
             <tr>
                 <th>Event Title</th>
                 <th>Description</th>
-                <th>Created By</th>
-                <th>Vendor</th>
+                <th>User Name</th>
+                <th>Vendor Services</th>
+                <th>Venue Location</th>
             </tr>
         </thead>
         <tbody>
@@ -22,13 +23,14 @@
                 <td>{{ event.title }}</td>
                 <td>{{ event.description }}</td>
                 <td>{{ event.user_name }}</td>
-                <td>{{ event.vendor_email }}</td>
+                <td>{{ event.vendor_services }}</td>
+                <td>{{ event.venue_location }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
     {% else %}
-    <p>You don't have any venue bookings yet.</p>
+    <p>You don't have any bookings yet.</p>
     {% endif %}
 </div>
 {% endblock %}
