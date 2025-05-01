@@ -1,0 +1,20 @@
+[
+    {
+        "name": "bhanu ",
+        "email": "bhanusathvik6@gmail.com",
+        "password": "scrypt:32768:8:1$ZbpuwTEoz1DlLhm5$ac6a1e11d5a31c9bcd8362615603478dbd3dfeef105e6efcfe75e7649e68174c357d2c23a3993888a1702456ea8750acf153b527e363abcb4ae8d6ef7ede67ac",
+        "role": "User"
+    },
+    {
+        "name": "dhanush",
+        "email": "dhanush@gmail.com",
+        "password": "scrypt:32768:8:1$uRfJKP7sqzbTa2Jz$bc73231039b0de88027ddb181cde4ff81cc0e3212024062d7a62f60163adc364d6c1d3259fc00c4d7a91a6c4f5e594742d09e9f0bebc86d9c42c73d9b8ea0066",
+        "role": "Vendor"
+    },
+    {
+        "name": "jsk",
+        "email": "jsk@gmail.com",
+        "password": "scrypt:32768:8:1$jW5OMCjlkutlFDwW$4d03677c1befd07c374a1621f5f91516e6bce20e2ce12b38f28f7aa09d39dea9de8c0c071ea84bcede29409de5336964a54f0a12b81062e08da3e593fead4ac9",
+        "role": "Venue Owner"
+    }
+]

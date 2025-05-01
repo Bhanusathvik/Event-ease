@@ -1,0 +1,26 @@
+[
+    {
+        "title": "jnanesh bday",
+        "description": "this is descrption",
+        "user_email": "bhanusathvik6@gmail.com",
+        "user_name": "bhanu ",
+        "vendor_email": "dhanush@gmail.com",
+        "venue_owner_email": "jsk@gmail.com"
+    },
+    {
+        "title": "event1",
+        "description": "none",
+        "user_email": "dhanush@gmail.com",
+        "user_name": "dhanush",
+        "vendor_email": "dhanush@gmail.com",
+        "venue_owner_email": "jsk@gmail.com"
+    },
+    {
+        "title": "event2",
+        "description": "",
+        "user_email": "dhanush@gmail.com",
+        "user_name": "dhanush",
+        "vendor_email": "",
+        "venue_owner_email": "jsk@gmail.com"
+    }
+]

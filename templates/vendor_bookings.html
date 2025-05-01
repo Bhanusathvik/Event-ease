@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Vendor Bookings - Event Ease{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>My Vendor Bookings</h2>
+    
+    {% if events %}
+    <table>
+        <thead>
+            <tr>
+                <th>Event Title</th>
+                <th>Description</th>
+                <th>Created By</th>
+                <th>Venue Owner</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in events %}
+            <tr>
+                <td>{{ event.title }}</td>
+                <td>{{ event.description }}</td>
+                <td>{{ event.user_name }}</td>
+                <td>{{ event.venue_owner_email }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>You don't have any bookings yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

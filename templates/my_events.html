@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}My Events - Event Ease{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>My Events</h2>
+    
+    {% if events %}
+    <table>
+        <thead>
+            <tr>
+                <th>Event Title</th>
+                <th>Description</th>
+                <th>Vendor</th>
+                <th>Venue Owner</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in events %}
+            <tr>
+                <td>{{ event.title }}</td>
+                <td>{{ event.description }}</td>
+                <td>{{ event.vendor_email }}</td>
+                <td>{{ event.venue_owner_email }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>You haven't created any events yet.</p>
+    <a href="{{ url_for('create_event') }}" class="btn">Create Your First Event</a>
+    {% endif %}
+</div>
+{% endblock %}

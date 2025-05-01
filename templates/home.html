@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - Event Ease{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Welcome, {{ user_name }}!</h2>
+    <p>You are currently logged in as: <strong>{{ user_role }}</strong></p>
+    
+    <div style="margin-top: 20px;">
+       
+            <h3>What would you like to do?</h3>
+            <div style="margin-top: 20px;">
+                <a href="{{ url_for('create_event') }}" class="btn">Create New Event</a>
+                <a href="{{ url_for('my_events') }}" class="btn" style="margin-left: 10px;">View My Events</a>
+            </div>
+        {% if user_role == 'Vendor' %}
+            <h3>Your Vendor Dashboard</h3>
+            <div style="margin-top: 20px;">
+                <a href="{{ url_for('vendor_bookings') }}" class="btn">View My Bookings</a>
+            </div>
+        {% elif user_role == 'Venue Owner' %}
+            <h3>Your Venue Dashboard</h3>
+            <div style="margin-top: 20px;">
+                <a href="{{ url_for('venue_bookings') }}" class="btn">View My Venue Bookings</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
