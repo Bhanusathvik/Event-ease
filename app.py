@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 import os
 import json
 from werkzeug.security import generate_password_hash, check_password_hash
+import uuid
 
 app = Flask(__name__)
 app.secret_key = 'event_ease_secret_key'
@@ -124,6 +125,10 @@ def create_event():
         return redirect(url_for('login'))
 
     if request.method == 'POST':
+        # Generate a unique ID for the event
+        event_id = str(uuid.uuid4())
+        
+        # Get form data
         title = request.form.get('title')
         description = request.form.get('description')
         vendor_email = request.form.get('vendor')
@@ -135,14 +140,22 @@ def create_event():
         venue_phone = request.form.get('venue_phone')
         reminder_date = request.form.get('reminder_date')
 
+        # Get vendor and venue owner information
+        vendor = get_user_by_email(vendor_email)
+        venue_owner = get_user_by_email(venue_owner_email)
+        
+        # Create new event object
         events = load_events()
         new_event = {
+            'id': event_id,
             'title': title,
             'description': description,
             'user_email': session['user_email'],
             'user_name': session['user_name'],
             'vendor_email': vendor_email,
+            'vendor_name': vendor['name'] if vendor else 'Unknown',
             'venue_owner_email': venue_owner_email,
+            'venue_owner_name': venue_owner['name'] if venue_owner else 'Unknown',
             'vendor_services': vendor_services,
             'vendor_phone': vendor_phone,
             'venue_location_lat': venue_location_lat,
@@ -196,14 +209,64 @@ def venue_bookings():
         flash('Only venue owners can view venue bookings.')
         return redirect(url_for('home'))
 
-    # Load all events (Assuming `load_events()` is a function that loads all events)
+    # Load all events
     events = load_events()
 
     # Filter events based on the logged-in venue owner's email
-    venue_events = [event for event in events if event['venue_owner_email'] == session['user_email']]
+    venue_events = [event for event in events if event.get('venue_owner_email') == session['user_email']]
 
     # Render the 'venue_bookings.html' template and pass the filtered events
     return render_template('venue_bookings.html', events=venue_events)
+
+@app.route('/event/<event_id>')
+def view_event(event_id):
+    if 'user_email' not in session:
+        flash('Please login first.')
+        return redirect(url_for('login'))
+    
+    events = load_events()
+    event = next((e for e in events if e.get('id') == event_id), None)
+    
+    if not event:
+        flash('Event not found.')
+        return redirect(url_for('home'))
+    
+    # Check if the user has permission to view this event
+    user_email = session['user_email']
+    user_role = session['user_role']
+    
+    if (user_email != event['user_email'] and 
+        user_email != event.get('vendor_email') and 
+        user_email != event.get('venue_owner_email')):
+        flash('You do not have permission to view this event.')
+        return redirect(url_for('home'))
+    
+    return render_template('view_event.html', event=event)
+
+@app.route('/event/<event_id>/delete', methods=['POST'])
+def delete_event(event_id):
+    if 'user_email' not in session:
+        flash('Please login first.')
+        return redirect(url_for('login'))
+    
+    events = load_events()
+    event = next((e for e in events if e.get('id') == event_id), None)
+    
+    if not event:
+        flash('Event not found.')
+        return redirect(url_for('home'))
+    
+    # Only the event creator can delete the event
+    if session['user_email'] != event['user_email']:
+        flash('You do not have permission to delete this event.')
+        return redirect(url_for('home'))
+    
+    # Remove the event from the list
+    events = [e for e in events if e.get('id') != event_id]
+    save_events(events)
+    
+    flash('Event deleted successfully.')
+    return redirect(url_for('my_events'))
 
 if __name__ == '__main__':
     app.run(debug=True)
