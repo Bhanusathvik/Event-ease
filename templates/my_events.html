@@ -4,15 +4,54 @@
     <title>My Events</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
-        .event-card {
-            border: 1px solid #ccc;
-            padding: 16px;
-            margin-bottom: 20px;
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
         }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+
+        .event-card {
+            background-color: #ffffff;
+            border-left: 6px solid #3498db;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 30px;
+            transition: transform 0.2s ease;
+        }
+
+        .event-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .event-card h2 {
+            color: #2980b9;
+            margin-top: 0;
+        }
+
+        .event-card p {
+            margin: 8px 0;
+            color: #34495e;
+        }
+
+        .event-card p strong {
+            color: #2c3e50;
+        }
+
         .map {
             height: 300px;
             width: 100%;
-            margin-top: 10px;
+            margin-top: 15px;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 2px solid #ecf0f1;
         }
     </style>
 </head>
@@ -29,22 +68,33 @@
 
         {% if event.venue_location_lat and event.venue_location_lng %}
         <div id="map{{ loop.index }}" class="map"></div>
-        <script>
-            document.addEventListener("DOMContentLoaded", function () {
-                var map = L.map('map{{ loop.index }}').setView(
-                    [{{ event.venue_location_lat }}, {{ event.venue_location_lng }}],
-                    14
-                );
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19
-                }).addTo(map);
-                L.marker([{{ event.venue_location_lat }}, {{ event.venue_location_lng }}]).addTo(map);
-            });
-        </script>
         {% endif %}
     </div>
     {% endfor %}
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const eventLocations = [
+                {% for event in events %}
+                    {% if event.venue_location_lat and event.venue_location_lng %}
+                    {
+                        id: "map{{ loop.index }}",
+                        lat: {{ event.venue_location_lat }},
+                        lng: {{ event.venue_location_lng }}
+                    },
+                    {% endif %}
+                {% endfor %}
+            ];
+
+            eventLocations.forEach(({ id, lat, lng }) => {
+                const map = L.map(id).setView([lat, lng], 14);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19
+                }).addTo(map);
+                L.marker([lat, lng]).addTo(map);
+            });
+        });
+    </script>
 </body>
 </html>

@@ -3,23 +3,120 @@
 {% block title %}Register - Event Ease{% endblock %}
 
 {% block content %}
+<style>
+    .card {
+        background-color: #fff;
+        border-radius: 20px;
+        padding: 40px;
+        max-width: 550px;
+        margin: 60px auto;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+        animation: fadeIn 0.6s ease-in-out;
+    }
+
+    h2 {
+        text-align: center;
+        color: #7b2cbf;
+        margin-bottom: 30px;
+        font-weight: 600;
+        text-shadow: 1px 1px 4px #ffdbff;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 10px;
+        color: #333;
+        font-weight: 600;
+        font-size: 15px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    select {
+        width: 100%;
+        padding: 14px;
+        border: 2px solid #e0c3fc;
+        border-radius: 12px;
+        background-color: #f8f1ff;
+        font-size: 16px;
+        transition: all 0.3s ease-in-out;
+    }
+
+    input:focus,
+    select:focus {
+        border-color: #c084fc;
+        box-shadow: 0 0 5px #d0aaff;
+        outline: none;
+    }
+
+    .btn {
+        background: linear-gradient(to right, #6a11cb, #2575fc);
+        color: white;
+        border: none;
+        padding: 14px 20px;
+        font-size: 16px;
+        border-radius: 10px;
+        cursor: pointer;
+        width: 100%;
+        font-weight: 600;
+        transition: background 0.3s ease-in-out;
+    }
+
+    .btn:hover {
+        background: linear-gradient(to right, #5b0ed0, #1c65f1);
+    }
+
+    p {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 14px;
+        color: #555;
+    }
+
+    p a {
+        color: #7b2cbf;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    p a:hover {
+        text-decoration: underline;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
 <div class="card">
-    <h2>Register</h2>
+    <h2><i class="fas fa-user-plus"></i> Register</h2>
     <form method="POST" action="{{ url_for('register') }}">
         <div class="form-group">
-            <label for="name">Name</label>
+            <label for="name"><i class="fas fa-user"></i> Name</label>
             <input type="text" class="form-control" id="name" name="name" required>
         </div>
         <div class="form-group">
-            <label for="email">Email</label>
+            <label for="email"><i class="fas fa-envelope"></i> Email</label>
             <input type="email" class="form-control" id="email" name="email" required>
         </div>
         <div class="form-group">
-            <label for="password">Password</label>
+            <label for="password"><i class="fas fa-lock"></i> Password</label>
             <input type="password" class="form-control" id="password" name="password" required>
         </div>
         <div class="form-group">
-            <label for="role">Role</label>
+            <label for="role"><i class="fas fa-user-tag"></i> Role</label>
             <select class="form-control" id="role" name="role" required>
                 <option value="">-- Select Role --</option>
                 <option value="User">User</option>

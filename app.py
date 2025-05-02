@@ -186,16 +186,23 @@ def vendor_bookings():
 
 @app.route('/venue_bookings')
 def venue_bookings():
+    # Check if the user is logged in
     if 'user_email' not in session:
         flash('Please login first.')
         return redirect(url_for('login'))
 
+    # Check if the user is a Venue Owner
     if session['user_role'] != 'Venue Owner':
         flash('Only venue owners can view venue bookings.')
         return redirect(url_for('home'))
 
+    # Load all events (Assuming `load_events()` is a function that loads all events)
     events = load_events()
+
+    # Filter events based on the logged-in venue owner's email
     venue_events = [event for event in events if event['venue_owner_email'] == session['user_email']]
+
+    # Render the 'venue_bookings.html' template and pass the filtered events
     return render_template('venue_bookings.html', events=venue_events)
 
 if __name__ == '__main__':

@@ -3,34 +3,115 @@
 {% block title %}Vendor Bookings - Event Ease{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+    .card {
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 40px;
+        max-width: 800px;
+        margin: 60px auto;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+        animation: fadeIn 0.6s ease-in-out;
+    }
+
+    h2 {
+        text-align: center;
+        color: #6a0dad;
+        margin-bottom: 30px;
+        font-weight: 600;
+        text-shadow: 1px 1px 3px #e5ccff;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .btn {
+        background: linear-gradient(to right, #6a11cb, #2575fc);
+        color: white;
+        border: none;
+        padding: 14px;
+        font-size: 16px;
+        border-radius: 10px;
+        cursor: pointer;
+        width: 100%;
+        font-weight: 600;
+        transition: background 0.3s ease-in-out;
+    }
+
+    .btn:hover {
+        background: linear-gradient(to right, #5a0dbc, #1f65e0);
+    }
+
+    .map {
+        height: 300px;
+        width: 100%;
+        margin-bottom: 10px;
+        border-radius: 12px;
+        border: 2px solid #d5baff;
+        box-shadow: 0 2px 8px rgba(106, 17, 203, 0.2);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(15px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
 <div class="card">
-    <h2>My Vendor Bookings</h2>
+    <h2><i class="fas fa-calendar-check"></i> My Vendor Bookings</h2>
     
     {% if events %}
-    <table>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
         <thead>
-            <tr>
-                <th>Event Title</th>
-                <th>Description</th>
-                <th>User Name</th>
-                <th>Vendor Services</th>
-                <th>Venue Location</th>
+            <tr style="background-color: #2980b9; color: white;">
+                <th style="padding: 10px; text-align: left;">Event Title</th>
+                <th style="padding: 10px; text-align: left;">Description</th>
+                <th style="padding: 10px; text-align: left;">Vendor Services</th>
+                <th style="padding: 10px; text-align: left;">Venue Location</th>
+                <th style="padding: 10px; text-align: left;">Reminder</th>
             </tr>
         </thead>
         <tbody>
             {% for event in events %}
-            <tr>
-                <td>{{ event.title }}</td>
-                <td>{{ event.description }}</td>
-                <td>{{ event.user_name }}</td>
-                <td>{{ event.vendor_services }}</td>
-                <td>{{ event.venue_location }}</td>
+            <tr style="background-color: #f9f9f9; border-bottom: 1px solid #ddd; transition: background-color 0.3s;">
+                <td style="padding: 10px;">{{ event.title }}</td>
+                <td style="padding: 10px;">{{ event.description }}</td>
+                <td style="padding: 10px;">{{ event.vendor_services }}</td>
+                <td style="padding: 10px;">
+                    <div id="map-{{ event.id }}" class="map"></div>
+                    <p>Latitude: {{ event.venue_location_lat }}</p>
+                    <p>Longitude: {{ event.venue_location_lng }}</p>
+                </td>
+                <td style="padding: 10px;">{{ event.reminder_date }}</td>
             </tr>
+            <script>
+                let map{{ event.id }} = L.map('map-{{ event.id }}').setView([{{ event.venue_location_lat }}, {{ event.venue_location_lng }}], 13);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(map{{ event.id }});
+
+                L.marker([{{ event.venue_location_lat }}, {{ event.venue_location_lng }}]).addTo(map{{ event.id }})
+                    .bindPopup("Event: {{ event.title }}<br>Location: {{ event.venue_location_lat }}, {{ event.venue_location_lng }}")
+                    .openPopup();
+            </script>
             {% endfor %}
         </tbody>
     </table>
     {% else %}
-    <p>You don't have any bookings yet.</p>
+    <p style="color: #e74c3c; font-weight: bold;">You don't have any bookings yet.</p>
     {% endif %}
 </div>
+
 {% endblock %}

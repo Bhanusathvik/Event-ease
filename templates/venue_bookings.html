@@ -1,36 +1,65 @@
 {% extends 'base.html' %}
 
-{% block title %}Vendor Bookings - Event Ease{% endblock %}
+{% block title %}Venue Bookings - Event Ease{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 <div class="card">
-    <h2>My Vendor Bookings</h2>
+    <h2><i class="fas fa-calendar-check"></i> My Venue Bookings</h2>
     
     {% if events %}
-    <table>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
         <thead>
-            <tr>
-                <th>Event Title</th>
-                <th>Description</th>
-                <th>User Name</th>
-                <th>Vendor Services</th>
-                <th>Venue Location</th>
+            <tr style="background-color: #2980b9; color: white;">
+                <th style="padding: 10px; text-align: left;">Event Title</th>
+                <th style="padding: 10px; text-align: left;">Description</th>
+                <th style="padding: 10px; text-align: left;">User Name</th>
+                <th style="padding: 10px; text-align: left;">Vendor Services</th>
+                <th style="padding: 10px; text-align: left;">Reminder Date</th>
+                <th style="padding: 10px; text-align: left;">Venue Location</th>
             </tr>
         </thead>
         <tbody>
             {% for event in events %}
-            <tr>
-                <td>{{ event.title }}</td>
-                <td>{{ event.description }}</td>
-                <td>{{ event.user_name }}</td>
-                <td>{{ event.vendor_services }}</td>
-                <td>{{ event.venue_location }}</td>
+            <tr style="background-color: #f9f9f9; border-bottom: 1px solid #ddd; transition: background-color 0.3s;">
+                <td style="padding: 10px;">{{ event.title }}</td>
+                <td style="padding: 10px;">{{ event.description }}</td>
+                <td style="padding: 10px;">{{ event.user_name }}</td>
+                <td style="padding: 10px;">{{ event.vendor_services }}</td>
+                <td style="padding: 10px;">{{ event.reminder_date }}</td>
+                <td style="padding: 10px;">
+                    <div id="map-{{ event.id }}" class="map" style="height: 200px; width: 100%; border-radius: 12px;"></div>
+                    <p>Latitude: {{ event.venue_location_lat }}</p>
+                    <p>Longitude: {{ event.venue_location_lng }}</p>
+                </td>
             </tr>
+            <script>
+                let map{{ event.id }} = L.map('map-{{ event.id }}').setView([{{ event.venue_location_lat }}, {{ event.venue_location_lng }}], 13);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(map{{ event.id }});
+
+                L.marker([{{ event.venue_location_lat }}, {{ event.venue_location_lng }}]).addTo(map{{ event.id }})
+                    .bindPopup("Event: {{ event.title }}<br>Venue: {{ event.venue_location_lat }}, {{ event.venue_location_lng }}")
+                    .openPopup();
+            </script>
             {% endfor %}
         </tbody>
     </table>
     {% else %}
-    <p>You don't have any bookings yet.</p>
+    <p style="color: #e74c3c; font-weight: bold;">You don't have any bookings yet.</p>
     {% endif %}
 </div>
+
+<!-- Add hover effect with CSS -->
+<style>
+    table tbody tr:hover {
+        background-color: #f1f1f1; /* Light grey background on hover */
+    }
+</style>
+
 {% endblock %}
