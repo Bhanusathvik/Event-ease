@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Event - Event Ease{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+    .card {
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 40px;
+        max-width: 800px;
+        margin: 60px auto;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+        animation: fadeIn 0.6s ease-in-out;
+    }
+
+    h2 {
+        text-align: center;
+        color: #6a0dad;
+        margin-bottom: 30px;
+        font-weight: 600;
+        text-shadow: 1px 1px 3px #e5ccff;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    input[type="text"],
+    input[type="datetime-local"],
+    textarea,
+    select {
+        width: 100%;
+        padding: 14px;
+        border: 2px solid #dabfff;
+        border-radius: 12px;
+        background-color: #f9f0ff;
+        font-size: 16px;
+        transition: all 0.3s ease-in-out;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+        border-color: #b47bff;
+        box-shadow: 0 0 8px #c89fff;
+        outline: none;
+    }
+
+    #map {
+        height: 400px;
+        width: 100%;
+        margin-bottom: 10px;
+        border-radius: 12px;
+        border: 2px solid #d5baff;
+        box-shadow: 0 2px 8px rgba(106, 17, 203, 0.2);
+    }
+
+    .btn {
+        background: linear-gradient(to right, #6a11cb, #2575fc);
+        color: white;
+        border: none;
+        padding: 14px;
+        font-size: 16px;
+        border-radius: 10px;
+        cursor: pointer;
+        width: 100%;
+        font-weight: 600;
+        transition: background 0.3s ease-in-out;
+    }
+
+    .btn:hover {
+        background: linear-gradient(to right, #5a0dbc, #1f65e0);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(15px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<div class="card">
+    <h2><i class="fas fa-calendar-plus"></i> Create New Event</h2>
+    <form method="POST" action="{{ url_for('create_event') }}">
+        <div class="form-group">
+            <label for="title">Event Title</label>
+            <input type="text" class="form-control" id="title" name="title" required>
+        </div>
+        <div class="form-group">
+            <label for="description">Event Description</label>
+            <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+        </div>
+        <div class="form-group">
+            <label for="map">Select Venue Location</label>
+            <div id="map"></div>
+            <input type="hidden" id="venue_location_lat" name="venue_location_lat">
+            <input type="hidden" id="venue_location_lng" name="venue_location_lng">
+        </div>
+        <div class="form-group">
+            <label for="vendor">Select Vendor</label>
+            <select class="form-control" id="vendor" name="vendor" required>
+                <option value="">-- Select Vendor --</option>
+                {% for vendor in vendors %}
+                    <option value="{{ vendor.email }}">{{ vendor.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="vendor_phone">Vendor Phone</label>
+            <input type="text" class="form-control" id="vendor_phone" name="vendor_phone" required>
+        </div>
+        <div class="form-group">
+            <label for="vendor_services">Vendor Services</label>
+            <input type="text" class="form-control" id="vendor_services" name="vendor_services" required>
+        </div>
+        <div class="form-group">
+            <label for="venue_owner">Select Venue Owner</label>
+            <select class="form-control" id="venue_owner" name="venue_owner" required>
+                <option value="">-- Select Venue Owner --</option>
+                {% for venue_owner in venue_owners %}
+                    <option value="{{ venue_owner.email }}">{{ venue_owner.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="reminder_date">Reminder Date and Time</label>
+            <input type="datetime-local" class="form-control" id="reminder_date" name="reminder_date" required>
+        </div>
+        <div class="form-group">
+            <button type="submit" class="btn">Create Event</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    let map, marker;
+
+    function updateCoordinates(lat, lng) {
+        document.getElementById('venue_location_lat').value = lat;
+        document.getElementById('venue_location_lng').value = lng;
+    }
+
+    window.onload = function () {
+        map = L.map('map').setView([20.5937, 78.9629], 5);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        marker = L.marker([20.5937, 78.9629], { draggable: true }).addTo(map);
+        updateCoordinates(20.5937, 78.9629);
+
+        map.on('click', function (e) {
+            marker.setLatLng(e.latlng);
+            updateCoordinates(e.latlng.lat, e.latlng.lng);
+        });
+
+        marker.on('dragend', function (e) {
+            const pos = e.target.getLatLng();
+            updateCoordinates(pos.lat, pos.lng);
+        });
+
+        const locateBtn = L.control({ position: 'topleft' });
+        locateBtn.onAdd = function () {
+            const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+            div.innerHTML = '<a href="#" title="Use My Location" style="font-size:16px;padding:4px;">📍</a>';
+            div.onclick = function (e) {
+                e.preventDefault();
+                getMyLocation();
+            };
+            return div;
+        };
+        locateBtn.addTo(map);
+    };
+
+    function getMyLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function (position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    map.setView([lat, lng], 15);
+                    marker.setLatLng([lat, lng]);
+                    updateCoordinates(lat, lng);
+                },
+                function () {
+                    alert("Unable to retrieve your location.");
+                }
+            );
+        } else {
+            alert("Geolocation is not supported by your browser.");
+        }
+    }
+</script>
+{% endblock %}

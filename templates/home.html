@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - Event Ease{% endblock %}
+
+{% block content %}
+<style>
+    .card {
+        background-color: #fff;
+        border-radius: 20px;
+        padding: 40px;
+        max-width: 700px;
+        margin: 50px auto;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+        animation: fadeIn 0.6s ease-in-out;
+        text-align: center;
+    }
+
+    h2, h3 {
+        color: #7b2cbf;
+        font-weight: 600;
+        text-shadow: 1px 1px 4px #ffdbff;
+        margin-bottom: 20px;
+    }
+
+    p {
+        font-size: 16px;
+        color: #333;
+    }
+
+    .btn {
+        background: linear-gradient(to right, #ff6a88, #ff99ac);
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        font-size: 15px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+        margin: 10px 5px;
+        text-decoration: none;
+        display: inline-block;
+        transition: background 0.3s ease-in-out;
+    }
+
+    .btn:hover {
+        background: linear-gradient(to right, #ff3366, #ff85a2);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<div class="card">
+    <h2><i class="fas fa-user-circle"></i> Welcome, {{ user_name }}!</h2>
+    <p>You are currently logged in as: <strong>{{ user_role }}</strong></p>
+
+    <h3><i class="fas fa-bolt"></i> What would you like to do?</h3>
+    <div>
+        <a href="{{ url_for('create_event') }}" class="btn"><i class="fas fa-calendar-plus"></i> Create New Event</a>
+        <a href="{{ url_for('my_events') }}" class="btn"><i class="fas fa-calendar-check"></i> View My Events</a>
+    </div>
+
+    {% if user_role == 'Vendor' %}
+        <h3><i class="fas fa-briefcase"></i> Your Vendor Dashboard</h3>
+        <a href="{{ url_for('vendor_bookings') }}" class="btn"><i class="fas fa-eye"></i> View My Bookings</a>
+    {% elif user_role == 'Venue Owner' %}
+        <h3><i class="fas fa-building"></i> Your Venue Dashboard</h3>
+        <a href="{{ url_for('venue_bookings') }}" class="btn"><i class="fas fa-eye"></i> View My Venue Bookings</a>
+    {% endif %}
+</div>
+{% endblock %}

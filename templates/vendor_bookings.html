@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+
+{% block title %}Vendor Bookings - Event Ease{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+    .card {
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 40px;
+        max-width: 1000px;
+        margin: 60px auto;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+        animation: fadeIn 0.6s ease-in-out;
+    }
+
+    h2 {
+        text-align: center;
+        color: #6a0dad;
+        margin-bottom: 30px;
+        font-weight: 600;
+        text-shadow: 1px 1px 3px #e5ccff;
+    }
+
+    .events-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        gap: 30px;
+        margin-top: 30px;
+    }
+
+    .event-box {
+        background-color: #f9f9f9;
+        border-radius: 15px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .event-box:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    }
+
+    .event-header {
+        background: linear-gradient(to right, #6a11cb, #2575fc);
+        color: white;
+        padding: 15px;
+        font-weight: 600;
+    }
+
+    .event-content {
+        padding: 20px;
+    }
+
+    .event-detail {
+        margin-bottom: 12px;
+        color: #34495e;
+    }
+
+    .detail-label {
+        font-weight: 600;
+        color: #2c3e50;
+        display: block;
+        margin-bottom: 3px;
+    }
+
+    .map-container {
+        height: 200px;
+        width: 100%;
+        border-radius: 12px;
+        border: 2px solid #d5baff;
+        box-shadow: 0 2px 8px rgba(106, 17, 203, 0.2);
+        margin-top: 15px;
+    }
+
+    .location-details {
+        font-size: 0.9rem;
+        color: #7f8c8d;
+        margin-top: 5px;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .empty-message {
+        text-align: center;
+        color: #e74c3c;
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin: 40px 0;
+    }
+
+    .btn-back {
+        background: linear-gradient(to right, #6a11cb, #2575fc);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        font-size: 16px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.3s ease-in-out;
+        display: block;
+        width: fit-content;
+        margin: 20px auto;
+        text-decoration: none;
+    }
+
+    .btn-back:hover {
+        background: linear-gradient(to right, #5a0dbc, #1f65e0);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(15px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .events-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="card">
+    <h2><i class="fas fa-calendar-check"></i> My Vendor Bookings</h2>
+    
+    {% if events %}
+    <div class="events-grid">
+        {% for event in events %}
+        <div class="event-box">
+            <div class="event-header">
+                {{ event.title }}
+            </div>
+            <div class="event-content">
+                <div class="event-detail">
+                    <span class="detail-label">Description:</span>
+                    {{ event.description }}
+                </div>
+                
+                <div class="event-detail">
+                    <span class="detail-label">Booked By:</span>
+                    {{ event.user_name }}
+                </div>
+                
+                <div class="event-detail">
+                    <span class="detail-label">Services Required:</span>
+                    {{ event.vendor_services }}
+                </div>
+                
+                <div class="event-detail">
+                    <span class="detail-label">Reminder Date:</span>
+                    {{ event.reminder_date }}
+                </div>
+                
+                <div class="event-detail">
+                    <span class="detail-label">Venue Location:</span>
+                    {% if event.venue_location_lat and event.venue_location_lng %}
+                    <div id="map-container-{{ loop.index }}" class="map-container"></div>
+                    <div class="location-details">
+                        <small>Latitude: {{ event.venue_location_lat }}</small>
+                        <small>Longitude: {{ event.venue_location_lng }}</small>
+                    </div>
+                    {% else %}
+                    <p>No location specified</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <a href="{{ url_for('home') }}" class="btn-back">Back to Home</a>
+    {% else %}
+    <p class="empty-message">You don't have any vendor bookings yet.</p>
+    <a href="{{ url_for('home') }}" class="btn-back">Back to Home</a>
+    {% endif %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Wait for all content to load
+        setTimeout(function() {
+            {% for event in events %}
+                {% if event.venue_location_lat and event.venue_location_lng %}
+                    try {
+                        // Get the map container
+                        const mapContainer = document.getElementById('map-container-{{ loop.index }}');
+                        
+                        if (mapContainer) {
+                            // Initialize map
+                            const vendorMap{{ loop.index }} = L.map('map-container-{{ loop.index }}').setView(
+                                [{{ event.venue_location_lat }}, {{ event.venue_location_lng }}], 
+                                13
+                            );
+                            
+                            // Add the OpenStreetMap tiles
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                                maxZoom: 19
+                            }).addTo(vendorMap{{ loop.index }});
+                            
+                            // Add a marker at the event location
+                            const marker = L.marker([{{ event.venue_location_lat }}, {{ event.venue_location_lng }}]).addTo(vendorMap{{ loop.index }});
+                            
+                            // Add a popup with event information
+                            marker.bindPopup(
+                                "<strong>{{ event.title }}</strong><br>" +
+                                "Client: {{ event.user_name }}<br>" +
+                                "Services: {{ event.vendor_services }}"
+                            ).openPopup();
+                            
+                            // Force map redraw after a short delay
+                            setTimeout(function() {
+                                vendorMap{{ loop.index }}.invalidateSize();
+                            }, 100);
+                        } else {
+                            console.error('Map container not found for event {{ loop.index }}');
+                        }
+                    } catch (error) {
+                        console.error('Error initializing map for event {{ loop.index }}:', error);
+                    }
+                {% endif %}
+            {% endfor %}
+        }, 300); // Wait 300ms for DOM to be fully ready
+    });
+</script>
+{% endblock %}

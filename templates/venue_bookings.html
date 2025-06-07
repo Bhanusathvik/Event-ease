@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+
+{% block title %}Venue Bookings - Event Ease{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+    .card {
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 40px;
+        max-width: 1000px;
+        margin: 60px auto;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+        animation: fadeIn 0.6s ease-in-out;
+    }
+
+    h2 {
+        text-align: center;
+        color: #6a0dad;
+        margin-bottom: 30px;
+        font-weight: 600;
+        text-shadow: 1px 1px 3px #e5ccff;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    thead tr {
+        background: linear-gradient(to right, #6a11cb, #2575fc);
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    th, td {
+        padding: 15px;
+        text-align: left;
+        border-bottom: 1px solid #ecf0f1;
+    }
+
+    tbody tr {
+        background-color: #f9f9f9;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    tbody tr:hover {
+        background-color: #f1f1f1;
+        transform: scale(1.005);
+    }
+
+    .map-container {
+        height: 250px;
+        width: 100%;
+        border-radius: 12px;
+        border: 2px solid #d5baff;
+        box-shadow: 0 2px 8px rgba(106, 17, 203, 0.2);
+        margin-bottom: 10px;
+    }
+
+    .location-cell {
+        max-width: 300px;
+    }
+
+    .location-details {
+        font-size: 0.9rem;
+        color: #7f8c8d;
+        margin-top: 5px;
+    }
+
+    .empty-message {
+        text-align: center;
+        color: #e74c3c;
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin: 40px 0;
+    }
+
+    .btn-back {
+        background: linear-gradient(to right, #6a11cb, #2575fc);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        font-size: 16px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.3s ease-in-out;
+        display: block;
+        width: fit-content;
+        margin: 20px auto;
+        text-decoration: none;
+    }
+
+    .btn-back:hover {
+        background: linear-gradient(to right, #5a0dbc, #1f65e0);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(15px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        table, thead, tbody, th, td, tr {
+            display: block;
+        }
+        
+        thead tr {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+        }
+        
+        tr {
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        td {
+            border: none;
+            position: relative;
+            padding-left: 50%;
+        }
+        
+        td:before {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            width: 45%;
+            padding-right: 10px;
+            white-space: nowrap;
+            font-weight: bold;
+        }
+        
+        td:nth-of-type(1):before { content: "Event Title"; }
+        td:nth-of-type(2):before { content: "Description"; }
+        td:nth-of-type(3):before { content: "User Name"; }
+        td:nth-of-type(4):before { content: "Vendor Services"; }
+        td:nth-of-type(5):before { content: "Reminder Date"; }
+        td:nth-of-type(6):before { content: "Venue Location"; }
+    }
+</style>
+
+<div class="card">
+    <h2><i class="fas fa-calendar-check"></i> My Venue Bookings</h2>
+    
+    {% if events %}
+    <table>
+        <thead>
+            <tr>
+                <th>Event Title</th>
+                <th>Description</th>
+                <th>User Name</th>
+                <th>Vendor Services</th>
+                <th>Reminder Date</th>
+                <th>Venue Location</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in events %}
+            <tr>
+                <td>{{ event.title }}</td>
+                <td>{{ event.description }}</td>
+                <td>{{ event.user_name }}</td>
+                <td>{{ event.vendor_services }}</td>
+                <td>{{ event.reminder_date }}</td>
+                <td class="location-cell">
+                    {% if event.venue_location_lat and event.venue_location_lng %}
+                    <div id="map-container-{{ loop.index }}" class="map-container"></div>
+                    <div class="location-details">
+                        <small>Latitude: {{ event.venue_location_lat }}</small><br>
+                        <small>Longitude: {{ event.venue_location_lng }}</small>
+                    </div>
+                    {% else %}
+                    <p>No location specified</p>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <a href="{{ url_for('home') }}" class="btn-back">Back to Home</a>
+    {% else %}
+    <p class="empty-message">You don't have any venue bookings yet.</p>
+    <a href="{{ url_for('home') }}" class="btn-back">Back to Home</a>
+    {% endif %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Wait for all content to load
+        setTimeout(function() {
+            {% for event in events %}
+                {% if event.venue_location_lat and event.venue_location_lng %}
+                    try {
+                        // Get the map container
+                        const mapContainer = document.getElementById('map-container-{{ loop.index }}');
+                        
+                        if (mapContainer) {
+                            // Initialize map
+                            const venueMap{{ loop.index }} = L.map('map-container-{{ loop.index }}').setView(
+                                [{{ event.venue_location_lat }}, {{ event.venue_location_lng }}], 
+                                13
+                            );
+                            
+                            // Add the OpenStreetMap tiles
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                                maxZoom: 19
+                            }).addTo(venueMap{{ loop.index }});
+                            
+                            // Add a marker at the event location
+                            const marker = L.marker([{{ event.venue_location_lat }}, {{ event.venue_location_lng }}]).addTo(venueMap{{ loop.index }});
+                            
+                            // Add a popup with event information
+                            marker.bindPopup(
+                                "<strong>{{ event.title }}</strong><br>" +
+                                "Booked by: {{ event.user_name }}<br>" +
+                                "Services: {{ event.vendor_services }}"
+                            ).openPopup();
+                            
+                            // Force map redraw after a short delay
+                            setTimeout(function() {
+                                venueMap{{ loop.index }}.invalidateSize();
+                            }, 100);
+                        } else {
+                            console.error('Map container not found for event {{ loop.index }}');
+                        }
+                    } catch (error) {
+                        console.error('Error initializing map for event {{ loop.index }}:', error);
+                    }
+                {% endif %}
+            {% endfor %}
+        }, 300); // Wait 300ms for DOM to be fully ready
+    });
+</script>
+{% endblock %}
