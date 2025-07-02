@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+
+{% block title %}Select Event Type - Event Ease{% endblock %}
+
+{% block content %}
+<style>
+    .card {
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 40px;
+        max-width: 800px;
+        margin: 60px auto;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+        animation: fadeIn 0.6s ease-in-out;
+    }
+
+    h2 {
+        text-align: center;
+        color: #6a0dad;
+        margin-bottom: 40px;
+        font-weight: 600;
+        text-shadow: 1px 1px 3px #e5ccff;
+    }
+
+    .event-types {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .event-type-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        padding: 30px 20px;
+        text-align: center;
+        color: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 3px solid transparent;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .event-type-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+        border-color: #ffffff;
+    }
+
+    .event-type-card.selected {
+        border-color: #ffd700;
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    }
+
+    .event-type-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .event-type-card:hover::before {
+        left: 100%;
+    }
+
+    .event-type-card i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+        display: block;
+    }
+
+    .event-type-card h3 {
+        margin-bottom: 10px;
+        font-size: 1.3rem;
+        font-weight: 600;
+    }
+
+    .event-type-card p {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        line-height: 1.4;
+    }
+
+    .form-group {
+        text-align: center;
+        margin-top: 30px;
+    }
+
+    .btn {
+        background: linear-gradient(to right, #6a11cb, #2575fc);
+        color: white;
+        border: none;
+        padding: 15px 40px;
+        font-size: 16px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    .btn.enabled {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .btn.enabled:hover {
+        background: linear-gradient(to right, #5a0dbc, #1f65e0);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(106, 17, 203, 0.3);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(255, 215, 0, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(255, 215, 0, 0);
+        }
+    }
+
+    .event-type-card.selected {
+        animation: pulse 2s infinite;
+    }
+</style>
+
+<div class="card">
+    <h2><i class="fas fa-calendar-alt"></i> Select Event Type</h2>
+    
+    <form method="POST" action="{{ url_for('select_providers') }}">
+        <div class="event-types">
+            <div class="event-type-card" onclick="selectEventType('Wedding')">
+                <i class="fas fa-heart"></i>
+                <h3>Wedding</h3>
+                <p>Celebrate your special day with perfect arrangements</p>
+            </div>
+            
+            <div class="event-type-card" onclick="selectEventType('Birthday Party')">
+                <i class="fas fa-birthday-cake"></i>
+                <h3>Birthday Party</h3>
+                <p>Make birthdays memorable with amazing celebrations</p>
+            </div>
+            
+            <div class="event-type-card" onclick="selectEventType('Corporate Event')">
+                <i class="fas fa-briefcase"></i>
+                <h3>Corporate Event</h3>
+                <p>Professional events for your business needs</p>
+            </div>
+            
+            <div class="event-type-card" onclick="selectEventType('Conference')">
+                <i class="fas fa-users"></i>
+                <h3>Conference</h3>
+                <p>Organize successful conferences and seminars</p>
+            </div>
+            
+            <div class="event-type-card" onclick="selectEventType('Festival')">
+                <i class="fas fa-music"></i>
+                <h3>Festival</h3>
+                <p>Cultural and music festivals with grand celebrations</p>
+            </div>
+            
+            <div class="event-type-card" onclick="selectEventType('Social Gathering')">
+                <i class="fas fa-glass-cheers"></i>
+                <h3>Social Gathering</h3>
+                <p>Parties, reunions, and social events</p>
+            </div>
+        </div>
+        
+        <input type="hidden" id="event_type" name="event_type" value="">
+        
+        <div class="form-group">
+            <button type="submit" class="btn" id="continueBtn">
+                Continue to Select Providers <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    let selectedEventType = '';
+
+    function selectEventType(eventType) {
+        // Remove previous selection
+        document.querySelectorAll('.event-type-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+
+        // Add selection to clicked card
+        event.target.closest('.event-type-card').classList.add('selected');
+        
+        // Update form data
+        selectedEventType = eventType;
+        document.getElementById('event_type').value = eventType;
+        
+        // Enable continue button
+        const continueBtn = document.getElementById('continueBtn');
+        continueBtn.classList.add('enabled');
+    }
+</script>
+{% endblock %}

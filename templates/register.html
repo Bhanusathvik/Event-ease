@@ -3,6 +3,9 @@
 {% block title %}Register - Event Ease{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 <style>
     .card {
         background-color: #fff;
@@ -37,7 +40,8 @@
     input[type="text"],
     input[type="email"],
     input[type="password"],
-    select {
+    select,
+    textarea {
         width: 100%;
         padding: 14px;
         border: 2px solid #e0c3fc;
@@ -48,10 +52,30 @@
     }
 
     input:focus,
-    select:focus {
+    select:focus,
+    textarea:focus {
         border-color: #c084fc;
         box-shadow: 0 0 5px #d0aaff;
         outline: none;
+    }
+
+    #map {
+        height: 300px;
+        width: 100%;
+        margin-bottom: 10px;
+        border-radius: 12px;
+        border: 2px solid #e0c3fc;
+        box-shadow: 0 2px 8px rgba(123, 44, 191, 0.2);
+    }
+
+    .venue-fields {
+        display: none;
+        animation: slideDown 0.3s ease-in-out;
+    }
+
+    .vendor-fields {
+        display: none;
+        animation: slideDown 0.3s ease-in-out;
     }
 
     .btn {
@@ -98,6 +122,17 @@
             transform: translateY(0);
         }
     }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            max-height: 0;
+        }
+        to {
+            opacity: 1;
+            max-height: 1000px;
+        }
+    }
 </style>
 
 <div class="card">
@@ -117,17 +152,136 @@
         </div>
         <div class="form-group">
             <label for="role"><i class="fas fa-user-tag"></i> Role</label>
-            <select class="form-control" id="role" name="role" required>
+            <select class="form-control" id="role" name="role" required onchange="toggleRoleFields()">
                 <option value="">-- Select Role --</option>
                 <option value="User">User</option>
                 <option value="Vendor">Vendor</option>
                 <option value="Venue Owner">Venue Owner</option>
             </select>
         </div>
+
+        <!-- Common fields for Vendor and Venue Owner -->
+        <div class="form-group vendor-fields venue-fields" id="phoneField" style="display: none;">
+            <label for="phone"><i class="fas fa-phone"></i> Phone Number</label>
+            <input type="text" class="form-control" id="phone" name="phone">
+        </div>
+
+        <!-- Vendor specific fields -->
+        <div class="form-group vendor-fields" id="servicesField" style="display: none;">
+            <label for="services"><i class="fas fa-tools"></i> Services Offered</label>
+            <textarea class="form-control" id="services" name="services" rows="3" placeholder="e.g., Catering, Photography, DJ Services"></textarea>
+        </div>
+
+        <!-- Venue Owner specific fields -->
+        <div class="venue-fields" id="venueFields" style="display: none;">
+            <div class="form-group">
+                <label for="map"><i class="fas fa-map-marker-alt"></i> Select Your Venue Location</label>
+                <div id="map"></div>
+                <input type="hidden" id="venue_lat" name="venue_lat">
+                <input type="hidden" id="venue_lng" name="venue_lng">
+            </div>
+            <div class="form-group">
+                <label for="venue_address"><i class="fas fa-address-card"></i> Venue Address</label>
+                <textarea class="form-control" id="venue_address" name="venue_address" rows="3" placeholder="Enter your venue address"></textarea>
+            </div>
+        </div>
+
         <div class="form-group">
             <button type="submit" class="btn">Register</button>
         </div>
     </form>
     <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
 </div>
+
+<script>
+    let map, marker;
+
+    function toggleRoleFields() {
+        const role = document.getElementById('role').value;
+        const venueFields = document.getElementById('venueFields');
+        const vendorFields = document.querySelectorAll('.vendor-fields');
+        const phoneField = document.getElementById('phoneField');
+
+        // Hide all fields first
+        venueFields.style.display = 'none';
+        vendorFields.forEach(field => field.style.display = 'none');
+        phoneField.style.display = 'none';
+
+        if (role === 'Venue Owner') {
+            venueFields.style.display = 'block';
+            phoneField.style.display = 'block';
+            initializeMap();
+        } else if (role === 'Vendor') {
+            vendorFields.forEach(field => field.style.display = 'block');
+            phoneField.style.display = 'block';
+        }
+    }
+
+    function initializeMap() {
+        if (map) {
+            map.remove();
+        }
+        
+        map = L.map('map').setView([20.5937, 78.9629], 5);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        marker = L.marker([20.5937, 78.9629], { draggable: true }).addTo(map);
+        updateCoordinates(20.5937, 78.9629);
+
+        map.on('click', function (e) {
+            marker.setLatLng(e.latlng);
+            updateCoordinates(e.latlng.lat, e.latlng.lng);
+        });
+
+        marker.on('dragend', function (e) {
+            const pos = e.target.getLatLng();
+            updateCoordinates(pos.lat, pos.lng);
+        });
+
+        const locateBtn = L.control({ position: 'topleft' });
+        locateBtn.onAdd = function () {
+            const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+            div.innerHTML = '<a href="#" title="Use My Location" style="font-size:16px;padding:4px;">📍</a>';
+            div.onclick = function (e) {
+                e.preventDefault();
+                getMyLocation();
+            };
+            return div;
+        };
+        locateBtn.addTo(map);
+
+        // Resize map after it's visible
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 100);
+    }
+
+    function updateCoordinates(lat, lng) {
+        document.getElementById('venue_lat').value = lat;
+        document.getElementById('venue_lng').value = lng;
+    }
+
+    function getMyLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function (position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    map.setView([lat, lng], 15);
+                    marker.setLatLng([lat, lng]);
+                    updateCoordinates(lat, lng);
+                },
+                function () {
+                    alert("Unable to retrieve your location.");
+                }
+            );
+        } else {
+            alert("Geolocation is not supported by your browser.");
+        }
+    }
+</script>
 {% endblock %}

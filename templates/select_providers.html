@@ -1,0 +1,390 @@
+{% extends 'base.html' %}
+
+{% block title %}Select Providers - Event Ease{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+    .card {
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 40px;
+        max-width: 1200px;
+        margin: 60px auto;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+        animation: fadeIn 0.6s ease-in-out;
+    }
+
+    h2 {
+        text-align: center;
+        color: #6a0dad;
+        margin-bottom: 20px;
+        font-weight: 600;
+        text-shadow: 1px 1px 3px #e5ccff;
+    }
+
+    .event-type-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 20px;
+        display: inline-block;
+        margin-bottom: 30px;
+        font-weight: 600;
+    }
+
+    .providers-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        margin-bottom: 30px;
+    }
+
+    .provider-category {
+        background: #f8f1ff;
+        border-radius: 15px;
+        padding: 30px;
+        border: 2px solid #e0c3fc;
+    }
+
+    .provider-category h3 {
+        color: #7b2cbf;
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    .provider-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 15px;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .provider-card:hover {
+        border-color: #c084fc;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(192, 132, 252, 0.3);
+    }
+
+    .provider-card.selected {
+        border-color: #7b2cbf;
+        background: linear-gradient(135deg, #f3e8ff 0%, #e5ccff 100%);
+        box-shadow: 0 0 20px rgba(123, 44, 191, 0.3);
+    }
+
+    .provider-card.selected::after {
+        content: '✓';
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        background: #7b2cbf;
+        color: white;
+        border-radius: 50%;
+        width: 25px;
+        height: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+
+    .provider-name {
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: #333;
+        margin-bottom: 8px;
+    }
+
+    .provider-email {
+        color: #666;
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+    }
+
+    .provider-details {
+        display: none;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #ddd;
+        animation: slideDown 0.3s ease;
+    }
+
+    .provider-card.selected .provider-details {
+        display: block;
+    }
+
+    .provider-phone, .provider-services, .provider-address {
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+    }
+
+    .provider-phone i, .provider-services i, .provider-address i {
+        color: #7b2cbf;
+        margin-right: 8px;
+        width: 16px;
+    }
+
+    .venue-map {
+        height: 200px;
+        width: 100%;
+        border-radius: 8px;
+        margin-top: 10px;
+        border: 1px solid #ddd;
+    }
+
+    .continue-section {
+        text-align: center;
+        margin-top: 40px;
+        padding-top: 30px;
+        border-top: 2px solid #e0c3fc;
+    }
+
+    .selection-summary {
+        background: #f0f9ff;
+        border: 2px solid #0ea5e9;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        display: none;
+    }
+
+    .selection-summary.show {
+        display: block;
+        animation: fadeIn 0.5s ease;
+    }
+
+    .btn {
+        background: linear-gradient(to right, #6a11cb, #2575fc);
+        color: white;
+        border: none;
+        padding: 15px 40px;
+        font-size: 16px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    .btn.enabled {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .btn.enabled:hover {
+        background: linear-gradient(to right, #5a0dbc, #1f65e0);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(106, 17, 203, 0.3);
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideDown {
+        from { opacity: 0; max-height: 0; }
+        to { opacity: 1; max-height: 300px; }
+    }
+
+    @media (max-width: 768px) {
+        .providers-section {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+    }
+</style>
+
+<div class="card">
+    <h2><i class="fas fa-users-cog"></i> Select Providers</h2>
+    <div class="text-center">
+        <span class="event-type-badge">
+            <i class="fas fa-calendar-alt"></i> {{ event_type }}
+        </span>
+    </div>
+
+    <form method="POST" action="{{ url_for('select_provider') }}">
+        <div class="providers-section">
+            <!-- Vendors Section -->
+            <div class="provider-category">
+                <h3><i class="fas fa-tools"></i> Select Vendor</h3>
+                {% for vendor in vendors %}
+                <div class="provider-card" onclick="selectProvider('vendor', '{{ vendor.email }}', this)">
+                    <div class="provider-name">{{ vendor.name }}</div>
+                    <div class="provider-email"><i class="fas fa-envelope"></i> {{ vendor.email }}</div>
+                    
+                    <div class="provider-details">
+                        {% if vendor.phone %}
+                        <div class="provider-phone">
+                            <i class="fas fa-phone"></i> {{ vendor.phone }}
+                        </div>
+                        {% endif %}
+                        {% if vendor.services %}
+                        <div class="provider-services">
+                            <i class="fas fa-tools"></i> {{ vendor.services }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Venue Owners Section -->
+            <div class="provider-category">
+                <h3><i class="fas fa-map-marker-alt"></i> Select Venue Owner</h3>
+                {% for venue_owner in venue_owners %}
+                <div class="provider-card" onclick="selectProvider('venue_owner', '{{ venue_owner.email }}', this)">
+                    <div class="provider-name">{{ venue_owner.name }}</div>
+                    <div class="provider-email"><i class="fas fa-envelope"></i> {{ venue_owner.email }}</div>
+                    
+                    <div class="provider-details">
+                        {% if venue_owner.phone %}
+                        <div class="provider-phone">
+                            <i class="fas fa-phone"></i> {{ venue_owner.phone }}
+                        </div>
+                        {% endif %}
+                        {% if venue_owner.venue_address %}
+                        <div class="provider-address">
+                            <i class="fas fa-address-card"></i> {{ venue_owner.venue_address }}
+                        </div>
+                        {% endif %}
+                        {% if venue_owner.venue_lat and venue_owner.venue_lng %}
+                        <div class="venue-map" id="map_{{ loop.index }}" 
+                             data-lat="{{ venue_owner.venue_lat }}" 
+                             data-lng="{{ venue_owner.venue_lng }}"></div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <input type="hidden" name="vendor_email" id="selected_vendor" value="">
+        <input type="hidden" name="venue_owner_email" id="selected_venue_owner" value="">
+
+        <div class="continue-section">
+            <div class="selection-summary" id="selectionSummary">
+                <h4><i class="fas fa-check-circle"></i> Your Selection</h4>
+                <div id="summaryContent"></div>
+            </div>
+            
+            <button type="submit" class="btn" id="continueBtn">
+                Continue to Create Event <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    let selectedVendor = null;
+    let selectedVenueOwner = null;
+    let maps = {};
+
+    function selectProvider(type, email, element) {
+        if (type === 'vendor') {
+            // Remove selection from other vendor cards
+            document.querySelectorAll('.provider-category:first-child .provider-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            element.classList.add('selected');
+            selectedVendor = {
+                email: email,
+                name: element.querySelector('.provider-name').textContent,
+                element: element
+            };
+            document.getElementById('selected_vendor').value = email;
+            
+            // Initialize map if venue has location
+            setTimeout(() => {
+                const mapDiv = element.querySelector('.venue-map');
+                if (mapDiv && mapDiv.dataset.lat && mapDiv.dataset.lng) {
+                    initializeMap(mapDiv, mapDiv.dataset.lat, mapDiv.dataset.lng);
+                }
+            }, 100);
+            
+        } else if (type === 'venue_owner') {
+            // Remove selection from other venue owner cards
+            document.querySelectorAll('.provider-category:last-child .provider-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            element.classList.add('selected');
+            selectedVenueOwner = {
+                email: email,
+                name: element.querySelector('.provider-name').textContent,
+                element: element
+            };
+            document.getElementById('selected_venue_owner').value = email;
+            
+            // Initialize map if venue has location
+            setTimeout(() => {
+                const mapDiv = element.querySelector('.venue-map');
+                if (mapDiv && mapDiv.dataset.lat && mapDiv.dataset.lng) {
+                    initializeMap(mapDiv, mapDiv.dataset.lat, mapDiv.dataset.lng);
+                }
+            }, 100);
+        }
+        
+        updateSelectionSummary();
+        checkContinueButton();
+    }
+
+    function initializeMap(mapDiv, lat, lng) {
+        if (maps[mapDiv.id]) {
+            maps[mapDiv.id].remove();
+        }
+        
+        const map = L.map(mapDiv).setView([parseFloat(lat), parseFloat(lng)], 15);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+        
+        L.marker([parseFloat(lat), parseFloat(lng)])
+            .addTo(map)
+            .bindPopup('Venue Location');
+        
+        maps[mapDiv.id] = map;
+        
+        // Resize map after it's visible
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 100);
+    }
+
+    function updateSelectionSummary() {
+        if (selectedVendor && selectedVenueOwner) {
+            const summaryDiv = document.getElementById('selectionSummary');
+            const contentDiv = document.getElementById('summaryContent');
+            
+            contentDiv.innerHTML = `
+                <p><strong>Vendor:</strong> ${selectedVendor.name}</p>
+                <p><strong>Venue Owner:</strong> ${selectedVenueOwner.name}</p>
+            `;
+            
+            summaryDiv.classList.add('show');
+        }
+    }
+
+    function checkContinueButton() {
+        const continueBtn = document.getElementById('continueBtn');
+        if (selectedVendor && selectedVenueOwner) {
+            continueBtn.classList.add('enabled');
+        } else {
+            continueBtn.classList.remove('enabled');
+        }
+    }
+</script>
+{% endblock %}

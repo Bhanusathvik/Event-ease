@@ -16,11 +16,18 @@ class User(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
     role = db.Column(db.String(100), nullable=False)
+    # New fields for venue owners
+    venue_lat = db.Column(db.String(50))
+    venue_lng = db.Column(db.String(50))
+    venue_address = db.Column(db.String(300))
+    phone = db.Column(db.String(20))
+    services = db.Column(db.String(500))  # For vendors
 
 class Event(db.Model):
     id = db.Column(db.String(100), primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=False)
+    event_type = db.Column(db.String(100), nullable=False)
     user_email = db.Column(db.String(100), db.ForeignKey('user.email'))
     user_name = db.Column(db.String(100))
     vendor_email = db.Column(db.String(100))
@@ -31,6 +38,7 @@ class Event(db.Model):
     venue_owner_name = db.Column(db.String(100))
     venue_location_lat = db.Column(db.String(50))
     venue_location_lng = db.Column(db.String(50))
+    venue_address = db.Column(db.String(300))
     venue_phone = db.Column(db.String(20))
     reminder_date = db.Column(db.String(100))
 
@@ -53,11 +61,23 @@ def register():
             flash('Email already registered. Please use a different email.')
             return redirect(url_for('register'))
 
+        # If venue owner, store location data
+        venue_lat = request.form.get('venue_lat')
+        venue_lng = request.form.get('venue_lng')
+        venue_address = request.form.get('venue_address')
+        phone = request.form.get('phone')
+        services = request.form.get('services')
+
         new_user = User(
             name=name,
             email=email,
             password=generate_password_hash(password),
-            role=role
+            role=role,
+            venue_lat=venue_lat,
+            venue_lng=venue_lng,
+            venue_address=venue_address,
+            phone=phone,
+            services=services
         )
         db.session.add(new_user)
         db.session.commit()
@@ -102,6 +122,40 @@ def home():
                            user_name=session['user_name'], 
                            user_role=session['user_role'])
 
+@app.route('/select_event_type')
+def select_event_type():
+    if 'user_email' not in session:
+        flash('Please login first.')
+        return redirect(url_for('login'))
+    
+    return render_template('select_event_type.html')
+
+@app.route('/select_providers', methods=['GET', 'POST'])
+def select_providers():
+    if 'user_email' not in session:
+        flash('Please login first.')
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        event_type = request.form.get('event_type')
+        if not event_type:
+            flash('Please select an event type.')
+            return redirect(url_for('select_event_type'))
+        
+        session['selected_event_type'] = event_type
+    
+    event_type = session.get('selected_event_type')
+    if not event_type:
+        return redirect(url_for('select_event_type'))
+    
+    vendors = User.query.filter_by(role='Vendor').all()
+    venue_owners = User.query.filter_by(role='Venue Owner').all()
+    
+    return render_template('select_providers.html', 
+                         vendors=vendors, 
+                         venue_owners=venue_owners,
+                         event_type=event_type)
+
 @app.route('/create_event', methods=['GET', 'POST'])
 def create_event():
     if 'user_email' not in session:
@@ -112,13 +166,9 @@ def create_event():
         event_id = str(uuid.uuid4())
         title = request.form.get('title')
         description = request.form.get('description')
-        vendor_email = request.form.get('vendor')
-        venue_owner_email = request.form.get('venue_owner')
-        vendor_services = request.form.get('vendor_services')
-        vendor_phone = request.form.get('vendor_phone')
-        venue_location_lat = request.form.get('venue_location_lat')
-        venue_location_lng = request.form.get('venue_location_lng')
-        venue_phone = request.form.get('venue_phone')
+        event_type = session.get('selected_event_type')
+        vendor_email = session.get('selected_vendor_email')
+        venue_owner_email = session.get('selected_venue_owner_email')
         reminder_date = request.form.get('reminder_date')
 
         vendor = User.query.filter_by(email=vendor_email).first()
@@ -128,28 +178,65 @@ def create_event():
             id=event_id,
             title=title,
             description=description,
+            event_type=event_type,
             user_email=session['user_email'],
             user_name=session['user_name'],
             vendor_email=vendor_email,
             vendor_name=vendor.name if vendor else 'Unknown',
+            vendor_services=vendor.services if vendor else '',
+            vendor_phone=vendor.phone if vendor else '',
             venue_owner_email=venue_owner_email,
             venue_owner_name=venue_owner.name if venue_owner else 'Unknown',
-            vendor_services=vendor_services,
-            vendor_phone=vendor_phone,
-            venue_location_lat=venue_location_lat,
-            venue_location_lng=venue_location_lng,
-            venue_phone=venue_phone,
+            venue_location_lat=venue_owner.venue_lat if venue_owner else '',
+            venue_location_lng=venue_owner.venue_lng if venue_owner else '',
+            venue_address=venue_owner.venue_address if venue_owner else '',
+            venue_phone=venue_owner.phone if venue_owner else '',
             reminder_date=reminder_date
         )
         db.session.add(new_event)
         db.session.commit()
 
+        # Clear session data
+        session.pop('selected_event_type', None)
+        session.pop('selected_vendor_email', None)
+        session.pop('selected_venue_owner_email', None)
+
         flash('Event created successfully!')
         return redirect(url_for('my_events'))
 
-    vendors = User.query.filter_by(role='Vendor').all()
-    venue_owners = User.query.filter_by(role='Venue Owner').all()
-    return render_template('create_event.html', vendors=vendors, venue_owners=venue_owners)
+    # Check if providers are selected
+    if not session.get('selected_vendor_email') or not session.get('selected_venue_owner_email'):
+        flash('Please select vendor and venue owner first.')
+        return redirect(url_for('select_event_type'))
+
+    event_type = session.get('selected_event_type')
+    vendor = User.query.filter_by(email=session.get('selected_vendor_email')).first()
+    venue_owner = User.query.filter_by(email=session.get('selected_venue_owner_email')).first()
+
+    return render_template('create_event.html', 
+                         event_type=event_type,
+                         vendor=vendor,
+                         venue_owner=venue_owner)
+
+@app.route('/select_provider', methods=['POST'])
+def select_provider():
+    if 'user_email' not in session:
+        flash('Please login first.')
+        return redirect(url_for('login'))
+    
+    vendor_email = request.form.get('vendor_email')
+    venue_owner_email = request.form.get('venue_owner_email')
+    
+    if vendor_email:
+        session['selected_vendor_email'] = vendor_email
+    if venue_owner_email:
+        session['selected_venue_owner_email'] = venue_owner_email
+    
+    # Check if both are selected
+    if session.get('selected_vendor_email') and session.get('selected_venue_owner_email'):
+        return redirect(url_for('create_event'))
+    
+    return redirect(url_for('select_providers'))
 
 @app.route('/my_events')
 def my_events():
