@@ -2,11 +2,31 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
+import os
+from datetime import datetime, timedelta
+import tempfile
+import traceback
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = 'event_ease_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://BhanuSathvik:new_password@localhost/event_ease_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Email configuration (using Gmail as example)
+SMTP_SERVER = 'smtp.gmail.com'
+SMTP_PORT = 587
+EMAIL_ADDRESS = os.getenv('EMAIL_ADDRESS')  # Gets from .env file
+EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')  # Gets from .env file
 
 db = SQLAlchemy(app)
 
@@ -42,6 +62,119 @@ class Event(db.Model):
     venue_phone = db.Column(db.String(20))
     reminder_date = db.Column(db.String(100))
 
+class Invitation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.String(100), db.ForeignKey('event.id'), nullable=False)
+    guest_name = db.Column(db.String(100), nullable=False)
+    guest_email = db.Column(db.String(100), nullable=False)
+    invitation_sent = db.Column(db.Boolean, default=False)
+    rsvp_status = db.Column(db.String(20), default='pending')  # pending, accepted, declined
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+def generate_ics_file(event, invitation):
+    """Generate ICS (calendar) file content"""
+    # Parse the reminder_date
+    event_datetime = datetime.strptime(event.reminder_date, '%Y-%m-%dT%H:%M')
+    
+    # Create end time (assuming 2 hours duration)
+    end_datetime = event_datetime + timedelta(hours=2)
+    
+    # Format dates for ICS
+    start_date = event_datetime.strftime('%Y%m%dT%H%M%S')
+    end_date = end_datetime.strftime('%Y%m%dT%H%M%S')
+    
+    ics_content = f"""BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Event Ease//Event Invitation//EN
+BEGIN:VEVENT
+UID:{event.id}@eventeasy.com
+DTSTART:{start_date}
+DTEND:{end_date}
+SUMMARY:{event.title}
+DESCRIPTION:{event.description}
+LOCATION:{event.venue_address if event.venue_address else 'TBD'}
+ORGANIZER:CN={event.user_name}:MAILTO:{event.user_email}
+ATTENDEE:CN={invitation.guest_name}:MAILTO:{invitation.guest_email}
+STATUS:CONFIRMED
+SEQUENCE:0
+END:VEVENT
+END:VCALENDAR"""
+    
+    return ics_content
+
+def send_invitation_email(event, invitation):
+    """Send invitation email with calendar attachment"""
+    try:
+        # Create message
+        msg = MIMEMultipart()
+        msg['From'] = EMAIL_ADDRESS
+        msg['To'] = invitation.guest_email
+        msg['Subject'] = f"Invitation: {event.title}"
+        
+        # Email body
+        body = f"""
+        Dear {invitation.guest_name},
+        
+        You're invited to: {event.title}
+        
+        Event Details:
+        - Type: {event.event_type}
+        - Date & Time: {event.reminder_date}
+        - Venue: {event.venue_address if event.venue_address else 'TBD'}
+        - Organized by: {event.user_name}
+        
+        Description:
+        {event.description}
+        
+        Vendor: {event.vendor_name}
+        Services: {event.vendor_services}
+        
+        Please find the calendar invitation attached to add this event to your calendar.
+        
+        Best regards,
+        Event Ease Team
+        """
+        
+        msg.attach(MIMEText(body, 'plain'))
+        
+        # Create and attach ICS file
+        ics_content = generate_ics_file(event, invitation)
+        
+        # Create temporary file for ICS
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.ics', delete=False) as temp_file:
+            temp_file.write(ics_content)
+            temp_file_path = temp_file.name
+        
+        # Attach ICS file
+        with open(temp_file_path, 'rb') as attachment:
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(attachment.read())
+            encoders.encode_base64(part)
+            part.add_header(
+                'Content-Disposition',
+                f'attachment; filename= {event.title.replace(" ", "_")}.ics'
+            )
+            msg.attach(part)
+        
+        # Send email
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+        text = msg.as_string()
+        server.sendmail(EMAIL_ADDRESS, invitation.guest_email, text)
+        server.quit()
+        
+        # Clean up temporary file
+        os.unlink(temp_file_path)
+        
+        return True
+        
+    except Exception as e:
+        print("Error sending email:")
+        traceback.print_exc()
+        return False
+
+# ... (all your existing routes remain the same until create_event)
 @app.route('/')
 def index():
     if 'user_email' in session:
@@ -202,7 +335,8 @@ def create_event():
         session.pop('selected_venue_owner_email', None)
 
         flash('Event created successfully!')
-        return redirect(url_for('my_events'))
+        # Redirect to invitations page instead of my_events
+        return redirect(url_for('manage_invitations', event_id=event_id))
 
     # Check if providers are selected
     if not session.get('selected_vendor_email') or not session.get('selected_venue_owner_email'):
@@ -217,6 +351,120 @@ def create_event():
                          event_type=event_type,
                          vendor=vendor,
                          venue_owner=venue_owner)
+
+@app.route('/event/<event_id>/invitations')
+def manage_invitations(event_id):
+    if 'user_email' not in session:
+        flash('Please login first.')
+        return redirect(url_for('login'))
+
+    event = Event.query.filter_by(id=event_id).first()
+    if not event:
+        flash('Event not found.')
+        return redirect(url_for('my_events'))
+
+    # Check if user is the event owner
+    if session['user_email'] != event.user_email:
+        flash('You do not have permission to manage invitations for this event.')
+        return redirect(url_for('my_events'))
+
+    invitations = Invitation.query.filter_by(event_id=event_id).all()
+    return render_template('manage_invitations.html', event=event, invitations=invitations)
+
+@app.route('/event/<event_id>/add_invitation', methods=['POST'])
+def add_invitation(event_id):
+    if 'user_email' not in session:
+        flash('Please login first.')
+        return redirect(url_for('login'))
+
+    event = Event.query.filter_by(id=event_id).first()
+    if not event or session['user_email'] != event.user_email:
+        flash('You do not have permission to add invitations for this event.')
+        return redirect(url_for('my_events'))
+
+    guest_name = request.form.get('guest_name')
+    guest_email = request.form.get('guest_email')
+
+    if not guest_name or not guest_email:
+        flash('Please provide both guest name and email.')
+        return redirect(url_for('manage_invitations', event_id=event_id))
+
+    # Check if invitation already exists
+    existing_invitation = Invitation.query.filter_by(
+        event_id=event_id, 
+        guest_email=guest_email
+    ).first()
+    
+    if existing_invitation:
+        flash('Invitation already sent to this email.')
+        return redirect(url_for('manage_invitations', event_id=event_id))
+
+    new_invitation = Invitation(
+        event_id=event_id,
+        guest_name=guest_name,
+        guest_email=guest_email
+    )
+    
+    db.session.add(new_invitation)
+    db.session.commit()
+
+    flash('Guest added successfully!')
+    return redirect(url_for('manage_invitations', event_id=event_id))
+
+@app.route('/event/<event_id>/send_invitations', methods=['POST'])
+def send_invitations(event_id):
+    if 'user_email' not in session:
+        flash('Please login first.')
+        return redirect(url_for('login'))
+
+    event = Event.query.filter_by(id=event_id).first()
+    if not event or session['user_email'] != event.user_email:
+        flash('You do not have permission to send invitations for this event.')
+        return redirect(url_for('my_events'))
+
+    invitations = Invitation.query.filter_by(event_id=event_id, invitation_sent=False).all()
+    
+    if not invitations:
+        flash('No pending invitations to send.')
+        return redirect(url_for('manage_invitations', event_id=event_id))
+
+    success_count = 0
+    for invitation in invitations:
+        if send_invitation_email(event, invitation):
+            invitation.invitation_sent = True
+            success_count += 1
+    
+    db.session.commit()
+    
+    if success_count > 0:
+        flash(f'{success_count} invitations sent successfully!')
+    else:
+        flash('Failed to send invitations. Please check your email configuration.')
+    
+    return redirect(url_for('manage_invitations', event_id=event_id))
+
+@app.route('/event/<event_id>/delete_invitation/<int:invitation_id>', methods=['POST'])
+def delete_invitation(event_id, invitation_id):
+    if 'user_email' not in session:
+        flash('Please login first.')
+        return redirect(url_for('login'))
+
+    event = Event.query.filter_by(id=event_id).first()
+    if not event or session['user_email'] != event.user_email:
+        flash('You do not have permission to delete invitations for this event.')
+        return redirect(url_for('my_events'))
+
+    invitation = Invitation.query.filter_by(id=invitation_id, event_id=event_id).first()
+    if invitation:
+        db.session.delete(invitation)
+        db.session.commit()
+        flash('Invitation deleted successfully.')
+    else:
+        flash('Invitation not found.')
+    
+    return redirect(url_for('manage_invitations', event_id=event_id))
+
+# ... (all your other existing routes remain the same)
 
 @app.route('/select_provider', methods=['POST'])
 def select_provider():
